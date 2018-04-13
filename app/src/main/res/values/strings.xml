@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">DudeWheresMyCar</string>
+    <string name="set_latitude">Set Longitude:</string>
+    <string name="set_longitude">Set Latitude:</string>
+    <string name="current_latitude">Current Latitude:</string>
+    <string name="current_longitude">Current Longitude:</string>
+    <string name="distance_from_location">Distance from location (in meters):</string>
+    <string name="no_3d_fix">No 3D Fix</string>
+    <string name="set_location">Set Location</string>
+    <string name="google_maps_API_key">AIzaSyCpSu-WdBUXR8iI4wbdJeAkadNi-NHw6gE</string>
 </resources>

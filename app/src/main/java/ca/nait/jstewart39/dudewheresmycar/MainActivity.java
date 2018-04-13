@@ -13,7 +13,14 @@ import android.os.Bundle;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback
 {
     private static final String TAG = "MainActivity";
     TextView textViewCurrentLatitude;
@@ -30,11 +37,17 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        // retrieve the content view for the main screen
         setContentView(R.layout.activity_main);
 
+        // Get the SupportMapFragment and request notification when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+
         // Instantiate TextViews
-        textViewCurrentLatitude = (TextView) findViewById(R.id.textview_current_lat);
-        textViewCurrentLongitude = (TextView) findViewById(R.id.textview_current_long);
+        textViewCurrentLatitude = (TextView) findViewById(R.id.text_view_current_lat);
+        textViewCurrentLongitude = (TextView) findViewById(R.id.text_view_current_long);
         textViewSetLatitude = (TextView) findViewById(R.id.text_view_set_lat);
         textViewSetLongitude = (TextView) findViewById(R.id.text_view_set_long);
         textViewMeters = (TextView) findViewById(R.id.text_view_meters);
@@ -52,6 +65,20 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    // this configurs the map to the Lat and Long that are set
+    @Override
+    public void onMapReady(GoogleMap googleMap)
+    {
+        // Add a marker in Sydney, Australia,
+        // and move the map's camera to the same location.
+        LatLng setLocation = new LatLng(53.440832, -113.427787);
+        googleMap.addMarker(new MarkerOptions().position(setLocation)
+                .title("Marker in Edmonton"));
+        googleMap.moveCamera(CameraUpdateFactory.newLatLng(setLocation));
+        // this is used to zoom on the location
+        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(setLocation, 15));
+    }
+
     // Called when the location has changed
     public class MyLocationListener implements LocationListener
     {
@@ -66,6 +93,7 @@ public class MainActivity extends AppCompatActivity
                 double dLat = location.getLatitude();
                 double dLong = location.getLongitude();
 
+                // possibly to be used later
                 /*Location setLocation = new Location("");
                 setLocation.setLatitude(setLat);
                 setLocation.setLongitude(setLong);*/
