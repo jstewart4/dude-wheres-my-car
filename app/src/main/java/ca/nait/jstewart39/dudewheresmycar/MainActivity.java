@@ -10,6 +10,8 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,6 +20,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback
@@ -28,10 +31,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     TextView textViewSetLatitude;
     TextView textViewSetLongitude;
     TextView textViewMeters;
+    Button btnSetLocation;
+
+    double currentLat;
+    double currentLong;
 
     // REMINDER - in order to make this app more versatile, make buttons to set these latitudes and longitudes on demand
     double setLat = 53.440832;
     double setLong = -113.427787;
+
+    GoogleMap mGoogleMap;
+    Marker marker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -41,8 +51,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         setContentView(R.layout.activity_main);
 
         // Get the SupportMapFragment and request notification when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
         // Instantiate TextViews
@@ -51,6 +60,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         textViewSetLatitude = (TextView) findViewById(R.id.text_view_set_lat);
         textViewSetLongitude = (TextView) findViewById(R.id.text_view_set_long);
         textViewMeters = (TextView) findViewById(R.id.text_view_meters);
+        btnSetLocation = (Button) findViewById(R.id.btn_set_location);
 
         // this is to get the location service
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -63,20 +73,43 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         {
             Toast.makeText(this, "Security Exception - Go to app info and enable location services to use this app", Toast.LENGTH_LONG).show();
         }
+
+        btnSetLocation.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                setLat = currentLat;
+                setLong = currentLong;
+                // check that there is an existing marker and remove it
+                if (marker != null)
+                {
+                    marker.remove();
+                }
+
+                // add a new marker at the current position
+                LatLng latLng = new LatLng(currentLat, currentLong);
+                MarkerOptions markerOptions = new MarkerOptions();
+                markerOptions.position(latLng);
+                markerOptions.title("Set Location Marker");
+                marker = mGoogleMap.addMarker(markerOptions);
+
+                //move map camera to new location
+                mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+            }
+        });
     }
 
-    // this configurs the map to the Lat and Long that are set
+    // this configures the map to the Lat and Long that are set
     @Override
     public void onMapReady(GoogleMap googleMap)
     {
-        // Add a marker in Sydney, Australia,
-        // and move the map's camera to the same location.
-        LatLng setLocation = new LatLng(53.440832, -113.427787);
-        googleMap.addMarker(new MarkerOptions().position(setLocation)
-                .title("Marker in Edmonton"));
-        googleMap.moveCamera(CameraUpdateFactory.newLatLng(setLocation));
-        // this is used to zoom on the location
-        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(setLocation, 15));
+        mGoogleMap = googleMap;
+        // move the maps camera to the set location.
+        LatLng setLocation = new LatLng(currentLat, currentLong);
+        mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(setLocation));
+        // this is used to zoom on the current location
+        mGoogleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(setLocation, 14));
     }
 
     // Called when the location has changed
@@ -90,15 +123,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (location != null) // before getting Latitude and Longitude, check if location is not null
             {
                 // get the current Latitude and Longitude
-                double dLat = location.getLatitude();
-                double dLong = location.getLongitude();
+                currentLat = location.getLatitude();
+                currentLong = location.getLongitude();
 
-                // possibly to be used later
-                /*Location setLocation = new Location("");
-                setLocation.setLatitude(setLat);
-                setLocation.setLongitude(setLong);*/
-
-                meters = calcMeterDifference(dLat, dLong);
+                meters = calcMeterDifference(currentLat, currentLong);
 
                 /* and alternative instead of the calcMeterDifference method that could be used is:
                    meters = setLocation.distanceTo(location);
@@ -111,8 +139,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 // set the set and current TextViews to the proper Longitude and Latitude
                 textViewSetLatitude.setText(String.valueOf(setLat));
                 textViewSetLongitude.setText(String.valueOf(setLong));
-                textViewCurrentLatitude.setText(String.valueOf(dLat));
-                textViewCurrentLongitude.setText(String.valueOf(dLong));
+                textViewCurrentLatitude.setText(String.valueOf(currentLat));
+                textViewCurrentLongitude.setText(String.valueOf(currentLong));
                 // set the metersTextView to distance from the set location in meters
                 textViewMeters.setText(strMeters);
             }
