@@ -17,8 +17,10 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -26,22 +28,21 @@ import com.google.android.gms.maps.model.MarkerOptions;
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback
 {
     private static final String TAG = "MainActivity";
-    TextView textViewCurrentLatitude;
-    TextView textViewCurrentLongitude;
-    TextView textViewSetLatitude;
-    TextView textViewSetLongitude;
+    TextView textViewCurrentLatLong;
+    TextView textViewSetLatLong;
     TextView textViewMeters;
     Button btnSetLocation;
 
     double currentLat;
     double currentLong;
-
-    // REMINDER - in order to make this app more versatile, make buttons to set these latitudes and longitudes on demand
-    double setLat = 53.440832;
-    double setLong = -113.427787;
+    double setLat;
+    double setLong;
 
     GoogleMap mGoogleMap;
-    Marker marker;
+    Marker setMarker;
+    Marker currentMarker;
+    protected LocationManager locationManager;
+    Location location;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -55,24 +56,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapFragment.getMapAsync(this);
 
         // Instantiate TextViews
-        textViewCurrentLatitude = (TextView) findViewById(R.id.text_view_current_lat);
-        textViewCurrentLongitude = (TextView) findViewById(R.id.text_view_current_long);
-        textViewSetLatitude = (TextView) findViewById(R.id.text_view_set_lat);
-        textViewSetLongitude = (TextView) findViewById(R.id.text_view_set_long);
+        textViewCurrentLatLong = (TextView) findViewById(R.id.text_view_current_lat_long);
+        textViewSetLatLong = (TextView) findViewById(R.id.text_view_set_lat_long);
         textViewMeters = (TextView) findViewById(R.id.text_view_meters);
         btnSetLocation = (Button) findViewById(R.id.btn_set_location);
 
         // this is to get the location service
-        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        // this wants us to catch a security exception, so we wrap it in a try/catch
-        try
-        {
-            // if this is set to 0,0 it updates location very fast. Make sure to ask permissions in the manifest
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, new MyLocationListener());
-        } catch (SecurityException e)
-        {
-            Toast.makeText(this, "Security Exception - Go to app info and enable location services to use this app", Toast.LENGTH_LONG).show();
-        }
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         btnSetLocation.setOnClickListener(new View.OnClickListener()
         {
@@ -81,18 +71,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             {
                 setLat = currentLat;
                 setLong = currentLong;
-                // check that there is an existing marker and remove it
-                if (marker != null)
+                // check that there is an existing setMarker and remove it
+                if (setMarker != null)
                 {
-                    marker.remove();
+                    setMarker.remove();
                 }
 
-                // add a new marker at the current position
+                // add a new setMarker at the current position
                 LatLng latLng = new LatLng(currentLat, currentLong);
                 MarkerOptions markerOptions = new MarkerOptions();
                 markerOptions.position(latLng);
                 markerOptions.title("Set Location Marker");
-                marker = mGoogleMap.addMarker(markerOptions);
+                setMarker = mGoogleMap.addMarker(markerOptions);
 
                 //move map camera to new location
                 mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
@@ -100,16 +90,47 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+    // gets the last known location to be used on the onMapReady method, so it centers on current location when app is launched
+    public Location getLocation(String provider)
+    {
+        if (locationManager.isProviderEnabled(provider))
+        {
+            // this wants us to catch a security exception, so we wrap it in a try/catch
+            try
+            {
+                // if this is set to 0,0 it updates location very fast. Make sure to ask permissions in the manifest
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, new MyLocationListener());
+                if (locationManager != null)
+                {
+                    location = locationManager.getLastKnownLocation(provider);
+                    return location;
+                }
+            } catch (SecurityException e)
+            {
+                Toast.makeText(this, "Security Exception - Go to app info and enable location services to use this app", Toast.LENGTH_LONG).show();
+            }
+            return location;
+        }
+        return location;
+    }
+
+
     // this configures the map to the Lat and Long that are set
     @Override
     public void onMapReady(GoogleMap googleMap)
     {
-        mGoogleMap = googleMap;
-        // move the maps camera to the set location.
-        LatLng setLocation = new LatLng(currentLat, currentLong);
-        mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(setLocation));
-        // this is used to zoom on the current location
-        mGoogleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(setLocation, 14));
+        Location newlocation = getLocation(LocationManager.NETWORK_PROVIDER);
+        if (newlocation != null) // before setting the map, check that the newlocation is not null
+        {
+            currentLat = newlocation.getLatitude();
+            currentLong = newlocation.getLongitude();
+            mGoogleMap = googleMap;
+            // move the maps camera to the set location.
+            LatLng setLocation = new LatLng(currentLat, currentLong);
+            mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(setLocation));
+            // this is used to zoom on the current location
+            mGoogleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(setLocation, 14));
+        }
     }
 
     // Called when the location has changed
@@ -137,12 +158,27 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 String strMeters = formatter.format(meters);
 
                 // set the set and current TextViews to the proper Longitude and Latitude
-                textViewSetLatitude.setText(String.valueOf(setLat));
-                textViewSetLongitude.setText(String.valueOf(setLong));
-                textViewCurrentLatitude.setText(String.valueOf(currentLat));
-                textViewCurrentLongitude.setText(String.valueOf(currentLong));
+                textViewSetLatLong.setText(String.valueOf(setLat) + "/" + String.valueOf(setLong));
+                textViewCurrentLatLong.setText(String.valueOf(currentLat) + "/" + String.valueOf(currentLong));
                 // set the metersTextView to distance from the set location in meters
+                if (strMeters.equals("NaN")) // if the location hasn't been set, display proper message rather than "NaN"
+                {
+                    strMeters = "No location set";
+                }
+
                 textViewMeters.setText(strMeters);
+
+                // check if current marker exists and remove the old one
+                if (currentMarker != null)
+                {
+                    currentMarker.remove();
+                }
+
+                // show the current marker for the current location
+                currentMarker = mGoogleMap.addMarker(new MarkerOptions()
+                        .position(new LatLng(currentLat, currentLong))
+                        .title("Current Location Marker")
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
             }
         }
 
