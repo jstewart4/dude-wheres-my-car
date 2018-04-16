@@ -1,13 +1,18 @@
 package ca.nait.jstewart39.dudewheresmycar;
 
+import android.Manifest;
 import android.content.Context;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -43,6 +48,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     Marker currentMarker;
     protected LocationManager locationManager;
     Location location;
+    public static final int PERMISSIONS_REQUEST_ACCESS_LOCATION = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -50,6 +56,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onCreate(savedInstanceState);
         // retrieve the content view for the main screen
         setContentView(R.layout.activity_main);
+
+        // check for permissions at runtime
+        if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+        {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_ACCESS_LOCATION);
+        }
 
         // Get the SupportMapFragment and request notification when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -65,29 +78,61 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         btnSetLocation.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
             {
-                setLat = currentLat;
-                setLong = currentLong;
-                // check that there is an existing setMarker and remove it
-                if (setMarker != null)
+                @Override
+                public void onClick(View view)
                 {
-                    setMarker.remove();
+                    setLat = currentLat;
+                    setLong = currentLong;
+                    // check that there is an existing setMarker and remove it
+                    if (setMarker != null)
+                    {
+                        setMarker.remove();
+                    }
+
+                    // add a new setMarker at the current position
+                    LatLng latLng = new LatLng(currentLat, currentLong);
+                    MarkerOptions markerOptions = new MarkerOptions();
+                    markerOptions.position(latLng);
+                    markerOptions.title("Set Location Marker");
+                    setMarker = mGoogleMap.addMarker(markerOptions);
+
+                    //move map camera to new location
+                    mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
                 }
+            });
 
-                // add a new setMarker at the current position
-                LatLng latLng = new LatLng(currentLat, currentLong);
-                MarkerOptions markerOptions = new MarkerOptions();
-                markerOptions.position(latLng);
-                markerOptions.title("Set Location Marker");
-                setMarker = mGoogleMap.addMarker(markerOptions);
+    }
 
-                //move map camera to new location
-                mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+    // catch the request permissions result from the onCreate method
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults)
+    {
+        switch (requestCode)
+        {
+            case PERMISSIONS_REQUEST_ACCESS_LOCATION:
+            {
+                // if the request is cancelled, the result arrays are empty
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                {
+
+                    // permission was granted
+                    Toast.makeText(getApplicationContext(), "Location permission allowed", Toast.LENGTH_SHORT).show();
+                    // now reload the app to get the map working with the current or last known Lat and Long
+                    finish();
+                    startActivity(getIntent());
+                } else
+                {
+                    // permission was denied
+                    Toast.makeText(getApplicationContext(), "Permission denied. You must allow location permission to use this app!", Toast.LENGTH_SHORT).show();
+                }
+                return;
             }
-        });
+
+            // other 'case' lines to check for other
+            // permissions this app might request
+        }
     }
 
     // gets the last known location to be used on the onMapReady method, so it centers on current location when app is launched
@@ -95,8 +140,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     {
         if (locationManager.isProviderEnabled(provider))
         {
-            // this wants us to catch a security exception, so we wrap it in a try/catch
-            try
+            // check for permissions at runtime
+            if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+            {
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            } else // else permissions have already been granted
             {
                 // if this is set to 0,0 it updates location very fast. Make sure to ask permissions in the manifest
                 locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, new MyLocationListener());
@@ -105,9 +154,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     location = locationManager.getLastKnownLocation(provider);
                     return location;
                 }
-            } catch (SecurityException e)
-            {
-                Toast.makeText(this, "Security Exception - Go to app info and enable location services to use this app", Toast.LENGTH_LONG).show();
             }
             return location;
         }
