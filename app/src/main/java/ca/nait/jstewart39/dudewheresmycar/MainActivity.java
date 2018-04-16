@@ -78,29 +78,29 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         btnSetLocation.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
             {
-                @Override
-                public void onClick(View view)
+                setLat = currentLat;
+                setLong = currentLong;
+                // check that there is an existing setMarker and remove it
+                if (setMarker != null)
                 {
-                    setLat = currentLat;
-                    setLong = currentLong;
-                    // check that there is an existing setMarker and remove it
-                    if (setMarker != null)
-                    {
-                        setMarker.remove();
-                    }
-
-                    // add a new setMarker at the current position
-                    LatLng latLng = new LatLng(currentLat, currentLong);
-                    MarkerOptions markerOptions = new MarkerOptions();
-                    markerOptions.position(latLng);
-                    markerOptions.title("Set Location Marker");
-                    setMarker = mGoogleMap.addMarker(markerOptions);
-
-                    //move map camera to new location
-                    mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+                    setMarker.remove();
                 }
-            });
+
+                // add a new setMarker at the current position
+                LatLng latLng = new LatLng(currentLat, currentLong);
+                MarkerOptions markerOptions = new MarkerOptions();
+                markerOptions.position(latLng);
+                markerOptions.title("Set Location Marker");
+                setMarker = mGoogleMap.addMarker(markerOptions);
+
+                //move map camera to new location
+                mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+            }
+        });
 
     }
 
@@ -129,9 +129,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
                 return;
             }
-
-            // other 'case' lines to check for other
-            // permissions this app might request
         }
     }
 
@@ -140,12 +137,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     {
         if (locationManager.isProviderEnabled(provider))
         {
-            // check for permissions at runtime
-            if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-            {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-            } else // else permissions have already been granted
+            // check that permissions are allowed before requesting for location updates
+            if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)
             {
                 // if this is set to 0,0 it updates location very fast. Make sure to ask permissions in the manifest
                 locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, new MyLocationListener());
@@ -155,7 +149,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     return location;
                 }
             }
-            return location;
         }
         return location;
     }
