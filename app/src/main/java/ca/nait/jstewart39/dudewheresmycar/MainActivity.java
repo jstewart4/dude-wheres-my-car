@@ -95,6 +95,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 MarkerOptions markerOptions = new MarkerOptions();
                 markerOptions.position(latLng);
                 markerOptions.title("Set Location Marker");
+                markerOptions.icon(BitmapDescriptorFactory.fromResource(R.drawable.car_icon_driving_car));
                 setMarker = mGoogleMap.addMarker(markerOptions);
 
                 //move map camera to new location
@@ -153,7 +154,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         return location;
     }
 
-
     // this configures the map to the Lat and Long that are set
     @Override
     public void onMapReady(GoogleMap googleMap)
@@ -179,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         @Override
         public void onLocationChanged(Location location)
         {
-            double meters = 33;
+            double meters = 0;
             if (location != null) // before getting Latitude and Longitude, check if location is not null
             {
                 // get the current Latitude and Longitude
@@ -203,9 +203,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (strMeters.equals("NaN")) // if the location hasn't been set, display proper message rather than "NaN"
                 {
                     strMeters = "No location set";
+                    textViewMeters.setText(strMeters);
+                } else
+                {
+                    textViewMeters.setText(strMeters + " meters");
                 }
-
-                textViewMeters.setText(strMeters);
 
                 // check if current marker exists and remove the old one
                 if (currentMarker != null)
@@ -217,14 +219,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 currentMarker = mGoogleMap.addMarker(new MarkerOptions()
                         .position(new LatLng(currentLat, currentLong))
                         .title("Current Location Marker")
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.maps_green_marker)));
             }
         }
 
         // this is an equation to calculate the distance from one point to another that includes the curvature of the earth (not straight through)
         private double calcMeterDifference(double currentLat, double currentLong)
         {
-            double distanceInMeters = 45;
+            double distanceInMeters = 0;
             // earths radius in miles
             double earthRadius = 3958.75;
             double dLatitude = Math.toRadians(currentLat - setLat);
@@ -239,6 +241,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             return distanceInMeters;
         }
 
+        // These next three override methods are needed for the LocationListener
         // Called when the provider status changes
         @Override
         public void onStatusChanged(String s, int i, Bundle bundle)

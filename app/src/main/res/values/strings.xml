@@ -3,7 +3,7 @@
     <string name="latitude_longitude">Latitudes &amp; Longitudes</string>
     <string name="set_lat_long">Set location:</string>
     <string name="current_lat_long">Current:</string>
-    <string name="distance_from_location">Distance from location (in meters):</string>
+    <string name="distance_from_location">Distance to location:</string>
     <string name="no_3d_fix">No 3D Fix</string>
     <string name="set_location">Set Location</string>
     <string name="google_maps_API_key">AIzaSyCpSu-WdBUXR8iI4wbdJeAkadNi-NHw6gE</string>
