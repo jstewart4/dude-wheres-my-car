@@ -7,6 +7,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -29,6 +30,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback
 {
@@ -46,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     GoogleMap mGoogleMap;
     Marker setMarker;
     Marker currentMarker;
+    Polyline line = null;
     protected LocationManager locationManager;
     Location location;
     public static final int PERMISSIONS_REQUEST_ACCESS_LOCATION = 1;
@@ -188,9 +192,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 meters = calcMeterDifference(currentLat, currentLong);
 
-                /* and alternative instead of the calcMeterDifference method that could be used is:
-                   meters = setLocation.distanceTo(location);
-                   although, this way may not be as accurate so it is not being used */
+                // this is for drawing the polyline from the set location to the current location on the map
+                if (setLat != 0 && setLong != 0) // check first that the location has been set to a Lat/Long
+                {
+                    if (line != null) // if line is not null, remove the old one
+                    {
+                        line.remove();
+                    }
+                    // now add a line from the current location to the set location
+                    line = mGoogleMap.addPolyline(new PolylineOptions()
+                            .add(new LatLng(currentLat, currentLong), new LatLng(setLat, setLong))
+                            .width(5)
+                            .color(Color.RED));
+                }
 
                 // format the meters into a decimal format
                 NumberFormat formatter = new DecimalFormat("0.00");
