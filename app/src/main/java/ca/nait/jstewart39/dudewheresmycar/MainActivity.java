@@ -6,14 +6,13 @@ import android.content.Context;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -23,7 +22,6 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
@@ -40,7 +38,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     TextView textViewSetLatLong;
     TextView textViewMeters;
     Button btnSetLocation;
-
     double currentLat;
     double currentLong;
     double setLat;
@@ -53,6 +50,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected LocationManager locationManager;
     Location location;
     public static final int PERMISSIONS_REQUEST_ACCESS_LOCATION = 1;
+
+    public static String globalPreferences = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -68,15 +67,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_ACCESS_LOCATION);
         }
 
-        // Get the SupportMapFragment and request notification when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+        // this is for getting the set location again after the app is closed
+        SharedPreferences sharedPreferences = getSharedPreferences(globalPreferences, MODE_PRIVATE);
+        // The 0.0 is there for if the the location hasn't been set before
+        String stringSetLat = sharedPreferences.getString("setLat", "0.0");
+        String stringSetLong = sharedPreferences.getString("setLong", "0.0");
+        // set it back to double and assign it to setLat/setLong
+        setLat = Double.parseDouble(stringSetLat);
+        setLong = Double.parseDouble(stringSetLong);
 
         // Instantiate TextViews
         textViewCurrentLatLong = (TextView) findViewById(R.id.text_view_current_lat_long);
         textViewSetLatLong = (TextView) findViewById(R.id.text_view_set_lat_long);
         textViewMeters = (TextView) findViewById(R.id.text_view_meters);
         btnSetLocation = (Button) findViewById(R.id.btn_set_location);
+
+        // Get the SupportMapFragment and request notification when the map is ready to be used.
+        // Required for the map to work properly.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
 
         // this is to get the location service
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -104,6 +113,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 //move map camera to new location
                 mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 14));
+
+                // this is for saving the setLat and setLong so it can be retrieved again when the app closes
+                SharedPreferences.Editor editor = getSharedPreferences(globalPreferences, MODE_PRIVATE).edit();
+                editor.putString("setLat", Double.toString(setLat));
+                editor.putString("setLong", Double.toString(setLong));
+                editor.commit(); // Very important
             }
         });
 
@@ -118,8 +133,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             case PERMISSIONS_REQUEST_ACCESS_LOCATION:
             {
                 // if the request is cancelled, the result arrays are empty
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 {
 
                     // permission was granted
@@ -130,7 +144,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 } else
                 {
                     // permission was denied
-                    Toast.makeText(getApplicationContext(), "Permission denied. You must allow location permission to use this app!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Permission denied. You must allow location permission to use this app!",
+                            Toast.LENGTH_SHORT).show();
                 }
                 return;
             }
@@ -143,8 +158,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (locationManager.isProviderEnabled(provider))
         {
             // check that permissions are allowed before requesting for location updates
-            if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+            if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                    PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MainActivity.this,
+                    Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED)
             {
                 // if this is set to 0,0 it updates location very fast. Make sure to ask permissions in the manifest
                 locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, new MyLocationListener());
@@ -173,13 +189,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(setLocation));
             // this is used to zoom on the current location
             mGoogleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(setLocation, 14));
+
+            // this is for adding the set location icon again on startup if the setLat and setLong have been set before
+            if (setLat != 0.0 && setLong != 0.0)
+            {
+                LatLng setLatLng = new LatLng(setLat, setLong);
+                MarkerOptions markerOptions = new MarkerOptions();
+                markerOptions.position(setLatLng);
+                markerOptions.title("Set Location Marker");
+                markerOptions.icon(BitmapDescriptorFactory.fromResource(R.drawable.car_icon_driving_car));
+                setMarker = mGoogleMap.addMarker(markerOptions);
+            }
         }
     }
 
     // Called when the location has changed
     public class MyLocationListener implements LocationListener
     {
-
         @Override
         public void onLocationChanged(Location location)
         {
@@ -190,6 +216,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 currentLat = location.getLatitude();
                 currentLong = location.getLongitude();
 
+                // this is for getting the meter difference between the set location and current location
+                // and setting that to the meters variable
                 meters = calcMeterDifference(currentLat, currentLong);
 
                 // this is for drawing the polyline from the set location to the current location on the map
@@ -213,6 +241,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 // set the set and current TextViews to the proper Longitude and Latitude
                 textViewSetLatLong.setText(String.valueOf(setLat) + "/" + String.valueOf(setLong));
                 textViewCurrentLatLong.setText(String.valueOf(currentLat) + "/" + String.valueOf(currentLong));
+
                 // set the metersTextView to distance from the set location in meters
                 if (strMeters.equals("NaN")) // if the location hasn't been set, display proper message rather than "NaN"
                 {
@@ -237,7 +266,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         }
 
-        // this is an equation to calculate the distance from one point to another that includes the curvature of the earth (not straight through)
+        // this is an equation to calculate the distance from one point to another that includes
+        // the curvature of the earth (not straight through)
         private double calcMeterDifference(double currentLat, double currentLong)
         {
             double distanceInMeters = 0;
